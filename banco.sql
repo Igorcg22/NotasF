@@ -52,18 +52,22 @@ INSERT INTO classificacao (descricao, tipo) VALUES
 ('RECURSOS HUMANOS', 'DESPESA'), ('SERVIÇOS OPERACIONAIS', 'DESPESA'),
 ('INFRAESTRUTURA E UTILIDADES', 'DESPESA'), ('ADMINISTRATIVAS', 'DESPESA');
 
--- View
-CREATE VIEW v_relatorio_notas AS
+--view
+CREATE OR REPLACE VIEW v_relatorio_financeiro_completo AS
 SELECT 
-    m.numero_nota,
-    m.data_emissao,
-    forn.razao_social AS fornecedor,
-    fat.razao_social AS faturado,
-    c.descricao AS categoria,
-    p.vencimento,
-    p.valor
+    m.id AS id_movimento,
+    m.numero_nota AS nota_fiscal,
+    m.data_emissao AS data_emissao,
+    f.razao_social AS fornecedor,
+    fat.nome AS faturado_para,
+    (SELECT GROUP_CONCAT(c.descricao SEPARATOR ', ') 
+     FROM movimento_classificacao mc 
+     JOIN classificacao c ON mc.id_classificacao = c.id 
+     WHERE mc.id_movimento = m.id) AS categorias,
+    p.vencimento AS data_vencimento,
+    p.valor AS valor_parcela,
+    m.valor_total AS valor_total_nota
 FROM movimentocontas m
-JOIN pessoas forn ON m.id_fornecedor = forn.id
-JOIN pessoas fat ON m.id_faturado = fat.id
-JOIN classificacao c ON m.id_classificacao = c.id
-JOIN parcelacontas p ON p.id_movimento = m.id;
+LEFT JOIN fornecedores f ON m.id_fornecedor = f.id
+LEFT JOIN faturados fat ON m.id_faturado = fat.id
+LEFT JOIN parcelacontas p ON m.id = p.id_movimento;
