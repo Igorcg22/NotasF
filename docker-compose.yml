@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Serviço do Banco de Dados
+  db:
+    image: mysql:8.0
+    container_name: mysql_unirv
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: projeto_financeiro
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      # Opcional: Se quiser que o banco já nasça com as tabelas,
+      # coloque seu arquivo banco.sql na mesma pasta
+      - ./banco.sql:/docker-entrypoint-initdb.d/banco.sql
+
+  # Serviço da API Python
+  api:
+    build: .
+    container_name: api_unirv
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:root@db/projeto_financeiro
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
+volumes:
+  db_data:
