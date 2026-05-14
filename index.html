@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8"><title>UniRV Financeiro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 p-10 font-sans">
+    <div class="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-xl">
+        <h1 class="text-2xl font-bold text-slate-800 mb-6 border-b pb-4">Gestão de Fornecedores UniRV</h1>
+        
+        <input type="file" id="pdf" class="mb-6 block w-full border p-3 rounded-lg bg-slate-50">
+        <button onclick="processar()" id="btn" class="w-full bg-blue-700 text-white font-bold py-4 rounded-xl hover:bg-blue-800 transition shadow-lg">EXTRAIR E ANALISAR NOTA</button>
+
+        <div id="res" class="hidden mt-8 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100">
+                    <h3 class="font-bold text-indigo-900 mb-2 text-xs uppercase">Análise: Fornecedor</h3>
+                    <div id="fornecBox" class="text-sm"></div>
+                </div>
+                <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100">
+                    <h3 class="font-bold text-indigo-900 mb-2 text-xs uppercase">Análise: Faturado</h3>
+                    <div id="faturBox" class="text-sm"></div>
+                </div>
+            </div>
+
+            <div class="p-5 bg-slate-50 rounded-xl border">
+                <h4 class="font-bold text-xs uppercase mb-3 text-slate-500">Dados da Nota</h4>
+                <div id="notaInfo" class="text-sm grid grid-cols-2 gap-2"></div>
+            </div>
+            
+            <button onclick="lancar()" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 transition shadow-lg">CONFIRMAR E SALVAR NO BANCO</button>
+        </div>
+    </div>
+
+    <script>
+        let payload = null;
+        async function processar() {
+            const f = document.getElementById('pdf').files[0];
+            const fd = new FormData(); fd.append('file', f);
+            const btn = document.getElementById('btn');
+            btn.innerText = "Processando..."; btn.disabled = true;
+
+            try {
+                const r = await fetch('http://127.0.0.1:8000/processar-nota', {method:'POST', body:fd});
+                payload = await r.json();
+
+                const anl = payload.analise; const ext = payload.extracao;
+                
+                document.getElementById('fornecBox').innerHTML = `<p>${ext.fornecedor.razao_social}</p><p class="font-bold text-indigo-700 mt-1">${anl.fornecedor.status}</p>`;
+                document.getElementById('faturBox').innerHTML = `<p>${ext.faturado.nome || ext.faturado.razao_social}</p><p class="font-bold text-indigo-700 mt-1">${anl.faturado.status}</p>`;
+                
+                document.getElementById('notaInfo').innerHTML = `
+                    <p><b>Nota:</b> ${ext.numero_nota}</p>
+                    <p><b>Total:</b> R$ ${ext.valor_total}</p>
+                    <p><b>Data:</b> ${ext.data_emissao}</p>
+                    <p><b>Categorias:</b> ${ext.categorias.join(', ')}</p>
+                `;
+
+                document.getElementById('res').classList.remove('hidden');
+            } catch(e) { alert("Erro na API"); }
+            finally { btn.innerText = "EXTRAIR E ANALISAR NOTA"; btn.disabled = false; }
+        }
+
+        async function lancar() {
+            const r = await fetch('http://127.0.0.1:8000/lancar', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            alert(d.message); location.reload();
+        }
+    </script>
+</body>
+</html>
